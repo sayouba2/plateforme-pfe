@@ -1,5 +1,9 @@
 # Mises à jour automatiques des dépendances (pratique Tier 2 « Patch Management »).
 # Les PR ouvertes par Dependabot passent par la même pipeline que les autres.
+# Politique et migrations : docs/MAINTENANCE_DEPENDANCES.md.
+# target-branch réserve ces réglages aux mises à jour de version. Les correctifs de
+# sécurité utilisent la branche par défaut (develop) et restent activés sur GitHub.
+# allow.update-types filtre les versions courantes, pas les correctifs de sécurité.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -8,6 +12,18 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Respecte notamment django>=5.2,<5.3 ; aucune modification des contraintes.
+    versioning-strategy: lockfile-only
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      backend-courant:
+        applies-to: version-updates
+        patterns: ["*"]
+        exclude-patterns: [django] # Les correctifs Django ont leur propre PR.
+        update-types: [minor, patch]
 
   - package-ecosystem: docker
     directory: /backend
@@ -15,6 +31,11 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Le runtime Python 3.13 est aligné entre l'image et les contrôles CI.
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-patch]
 
   - package-ecosystem: github-actions
     directory: /
@@ -22,6 +43,15 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      actions-courantes:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /web
@@ -29,6 +59,22 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Respecte les séries choisies, notamment les types Node.js 24 et TypeScript.
+    versioning-strategy: lockfile-only
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      react-web:
+        applies-to: version-updates
+        patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+        update-types: [minor, patch]
+      outils-web:
+        applies-to: version-updates
+        patterns: ["*"]
+        exclude-patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /mobile
@@ -36,3 +82,20 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # React et React Native restent aux versions exactes choisies par le SDK Expo.
+    # Leur mise à jour et tout changement de SDK passent par la procédure Expo.
+    versioning-strategy: lockfile-only
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      expo-mobile:
+        applies-to: version-updates
+        patterns: [expo, "expo-*", react, react-native, "react-native-*", "@types/react"]
+        update-types: [minor, patch]
+      outils-mobile:
+        applies-to: version-updates
+        patterns: ["*"]
+        exclude-patterns: [expo, "expo-*", react, react-native, "react-native-*", "@types/react"]
+        update-types: [minor, patch]
