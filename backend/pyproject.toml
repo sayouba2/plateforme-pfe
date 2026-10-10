@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "API Django de la plateforme de gestion des stages et PFE"
 requires-python = ">=3.13"
 dependencies = [
-    "django>=5.2,<5.3",        # LTS : correctifs de sécurité jusqu'en avril 2028
+    "django>=5.2,<6.2",        # LTS : correctifs de sécurité jusqu'en avril 2028
     "djangorestframework",
     "drf-spectacular",         # schéma OpenAPI : contrat d'API et cible du DAST
     "django-environ",          # configuration par variables d'environnement
