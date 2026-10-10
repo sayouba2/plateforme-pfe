@@ -1,0 +1,148 @@
+@startuml cas-utilisation-global
+' Plateforme de gestion des stages / PFE — diagramme de cas d'utilisation global
+' Générer l'image : java -jar plantuml.jar -charset UTF-8 -tpng cas-utilisation-global.puml
+
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam packageStyle rectangle
+skinparam ArrowColor #555555
+skinparam ActorBorderColor #333333
+skinparam ActorBackgroundColor #FFFFFF
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+skinparam usecase<<ia>> {
+  BackgroundColor #E8F0FE
+  BorderColor #1A73E8
+}
+skinparam rectangle {
+  BorderColor #333333
+  FontStyle bold
+}
+skinparam package {
+  BorderColor #9E9E9E
+  FontColor #424242
+}
+skinparam legend {
+  BackgroundColor #FAFAFA
+  BorderColor #BDBDBD
+}
+hide <<ia>> stereotype
+hide <<système>> stereotype
+
+title Plateforme de gestion des stages / PFE — cas d'utilisation globaux
+
+actor "Utilisateur\nauthentifié" as User
+actor "Visiteur" as Vis
+actor "Étudiant" as Etu
+actor "Responsable\nentreprise" as Ent
+actor "Tuteur\nentreprise" as Tut
+actor "Encadrant\nacadémique" as Enc
+actor "Administrateur\n(FST)" as Adm
+actor "LLM local\n(Ollama)" as LLM <<système>>
+
+' Les 5 rôles héritent des cas d'utilisation communs
+User <|-- Etu
+User <|-- Ent
+User <|-- Tut
+User <|-- Enc
+User <|-- Adm
+
+rectangle "Plateforme de gestion des stages / PFE" {
+
+  package "Commun" {
+    usecase "Créer un compte\n(étudiant ou entreprise)" as UC_Inscription
+    usecase "S'authentifier" as UC_Auth
+    usecase "Gérer son profil" as UC_Profil
+    usecase "Interroger l'assistant\nréglementaire (RAG)" as UC_RAG <<ia>>
+  }
+
+  package "Espace étudiant" {
+    usecase "Rechercher des offres" as UC_Offres
+    usecase "Postuler à une offre" as UC_Postuler
+    usecase "Téléverser son CV" as UC_CV
+    usecase "Suivre ses candidatures" as UC_SuiviCand
+    usecase "Déposer un rapport\n(avancement ou final)" as UC_Rapport
+    usecase "Consulter son évaluation" as UC_ConsulterEval
+  }
+
+  package "Espace entreprise" {
+    usecase "Gérer ses offres de stage" as UC_GererOffres
+    usecase "Examiner les candidatures\nreçues" as UC_Examiner
+    usecase "Obtenir un score de\ncompatibilité CV ↔ offre" as UC_Matching <<ia>>
+    usecase "Accepter ou refuser\nune candidature" as UC_Decider
+    usecase "Approuver la convention" as UC_ApprouverConv
+    usecase "Gérer les tuteurs et\nles affecter aux stagiaires" as UC_Tuteurs
+  }
+
+  package "Suivi et évaluation du stage" {
+    usecase "Suivre ses stagiaires\n(rapports, avancement)" as UC_SuiviStage
+    usecase "Commenter un rapport" as UC_Commenter
+    usecase "Évaluer le stagiaire\n(fiche entreprise)" as UC_EvalEnt
+    usecase "Noter le rapport final" as UC_Noter
+  }
+
+  package "Administration" {
+    usecase "Valider les comptes entreprise" as UC_ValiderEnt
+    usecase "Valider les conventions" as UC_ValiderConv
+    usecase "Affecter un encadrant\nacadémique" as UC_AffecterEnc
+    usecase "Gérer les utilisateurs" as UC_Users
+    usecase "Gérer la base documentaire\ndu RAG" as UC_DocsRAG
+    usecase "Consulter le journal d'audit" as UC_Audit
+  }
+}
+
+' --- Commun : hérité par les 5 rôles
+User --> UC_Auth
+User --> UC_Profil
+User --> UC_RAG
+Vis --> UC_Inscription
+
+' --- Étudiant
+Etu --> UC_Offres
+Etu --> UC_Postuler
+Etu --> UC_SuiviCand
+Etu --> UC_Rapport
+Etu --> UC_ConsulterEval
+UC_Postuler ..> UC_CV : <<include>>
+
+' --- Responsable entreprise
+Ent --> UC_GererOffres
+Ent --> UC_Examiner
+Ent --> UC_Decider
+Ent --> UC_ApprouverConv
+Ent --> UC_Tuteurs
+UC_Examiner <.. UC_Matching : <<extend>>
+
+' --- Tuteur entreprise
+Tut --> UC_SuiviStage
+Tut --> UC_Commenter
+Tut --> UC_EvalEnt
+
+' --- Encadrant académique
+Enc --> UC_SuiviStage
+Enc --> UC_Commenter
+Enc --> UC_Noter
+
+' --- Administrateur
+Adm --> UC_ValiderEnt
+Adm --> UC_ValiderConv
+Adm --> UC_AffecterEnc
+Adm --> UC_Users
+Adm --> UC_DocsRAG
+Adm --> UC_Audit
+
+' --- Acteur secondaire : le LLM local
+UC_Matching --> LLM
+UC_RAG --> LLM
+
+legend bottom left
+  Tous les cas d'utilisation, sauf « Créer un compte », exigent une authentification.
+  Chaque rôle n'accède qu'à ses propres données (voir la matrice d'autorisations).
+  <back:#E8F0FE> En bleu </back> : fonctionnalités s'appuyant sur le LLM local.
+endlegend
+
+@enduml

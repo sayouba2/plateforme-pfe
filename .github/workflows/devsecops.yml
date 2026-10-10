@@ -1,0 +1,349 @@
+# Pipeline DevSecOps de la plateforme PFE
+#
+# Chaque job correspond à une ou plusieurs pratiques Tier 1 (Prates & Pereira, 2025).
+# Un job en échec bloque la fusion grâce aux règles de protection des branches main et develop.
+#
+# Sécurité de la pipeline elle-même :
+#   - chaque action tierce est épinglée sur un SHA de commit (un tag peut être réécrit,
+#     comme lors de la compromission de trivy-action en mars 2026) ;
+#   - le jeton GITHUB_TOKEN est en lecture seule par défaut, chaque job ne reçoit que ses droits ;
+#   - aucune donnée contrôlable par un tiers (nom de branche, titre de PR) n'est injectée
+#     directement dans un script : elle passe par une variable d'environnement.
+
+name: DevSecOps
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 6 * * 1" # chaque lundi : détecte les nouvelles CVE même sans modification du code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: devsecops-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.13.0"
+  SEMGREP_VERSION: "1.180.0"
+  TRIVY_IMAGE: "aquasec/trivy:0.75.0"
+  ZAP_IMAGE: "ghcr.io/zaproxy/zaproxy:stable"
+
+jobs:
+  # --- Politique de branches : feat/..., fix/..., docs/... vers develop ; develop ou hotfix/... vers main
+  branch-name:
+    name: Nom de branche
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la convention de nommage
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [[ "$BASE" == "main" ]]; then
+            if [[ "$HEAD" == "develop" || "$HEAD" =~ ^hotfix/[a-z0-9._-]+$ ]]; then exit 0; fi
+            echo "::error::Seules develop ou une branche hotfix/... peuvent être fusionnées dans main (reçu : '$HEAD')."
+            exit 1
+          fi
+          if [[ "$HEAD" =~ ^(feat|fix|docs|test|refactor|chore|ci|sec|hotfix)/[a-z0-9._-]+$ || "$HEAD" =~ ^dependabot/ ]]; then
+            exit 0
+          fi
+          echo "::error::Nom de branche invalide : '$HEAD'. Format attendu : feat/..., fix/..., docs/... (minuscules, chiffres, . _ -)."
+          exit 1
+
+  # --- Pratique : détection de secrets (Shift Left, complétée par pre-commit en local)
+  secrets:
+    name: Secrets (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # commentaire sur la PR quand un secret est trouvé
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # tout l'historique : un secret supprimé reste dans les anciens commits
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- Pratique : SAST (Bandit + Semgrep), résultats publiés dans l'onglet Security
+  sast:
+    name: SAST (Bandit, Semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Installer les outils
+        run: pip install "bandit[sarif,toml]==1.9.4" "semgrep==${SEMGREP_VERSION}"
+
+      - name: Bandit (bloquant à partir de la sévérité moyenne)
+        run: bandit -c backend/pyproject.toml -r backend -ll -ii
+      - name: Bandit (rapport SARIF complet)
+        if: always()
+        run: bandit -c backend/pyproject.toml -r backend -f sarif -o bandit.sarif --exit-zero
+
+      - name: Semgrep (règles publiques + règles du projet)
+        run: |
+          semgrep scan --metrics=off \
+            --config p/python --config p/django \
+            --config p/javascript --config p/typescript --config p/react \
+            --config p/dockerfile --config security/semgrep \
+            --json-output=semgrep.json --sarif-output=semgrep.sarif
+      - name: Semgrep (bloquant sur la sévérité ERROR)
+        run: |
+          bloquants=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep.json)
+          echo "Résultats bloquants (ERROR) : $bloquants"
+          test "$bloquants" -eq 0
+
+      - name: Publier Bandit dans l'onglet Security
+        if: always() && hashFiles('bandit.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: bandit.sarif
+          category: bandit
+      - name: Publier Semgrep dans l'onglet Security
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  # --- Pratique : Vulnerability Scanning des dépendances Python (SCA)
+  dependencies:
+    name: Dépendances (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Installer les outils
+        run: pip install "uv==${UV_VERSION}" "pip-audit==2.10.1"
+      - name: Auditer les dépendances de production (versions et hachages du uv.lock)
+        working-directory: backend
+        run: |
+          uv export --locked --no-dev --format requirements-txt -o "$RUNNER_TEMP/requirements.txt"
+          pip-audit -r "$RUNNER_TEMP/requirements.txt" --require-hashes --disable-pip --desc
+
+  # --- Pratiques : Continuous Integration + Automated Security Testing
+  tests:
+    name: Tests et contrôles Django
+    runs-on: ubuntu-latest
+    # Services éphémères, joignables uniquement par le runner ; aucune donnée réelle.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: pfe_test
+          POSTGRES_USER: pfe_test
+          POSTGRES_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pfe_test -d pfe_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 127.0.0.1:6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_READ_DOT_ENV: "False"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DATABASE_URL: postgresql://pfe_test:${{ github.run_id }}-${{ github.run_attempt }}@127.0.0.1:5432/pfe_test
+      CACHE_URL: redis://127.0.0.1:6379/1
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Installer les dépendances (uv.lock vérifié)
+        run: |
+          pip install "uv==${UV_VERSION}"
+          uv sync --locked
+      - name: Générer une clé secrète éphémère
+        run: |
+          cle=$(python -c 'import secrets; print(secrets.token_urlsafe(50))')
+          echo "::add-mask::$cle"
+          echo "DJANGO_SECRET_KEY=$cle" >> "$GITHUB_ENV"
+      - name: Qualité et sécurité du code (Ruff)
+        run: uv run --locked ruff check .
+      - name: Tests (dont tests de sécurité)
+        run: uv run --locked pytest
+      - name: Migrations à jour
+        run: uv run --locked python manage.py makemigrations --check --dry-run
+      - name: Configuration de production (manage.py check --deploy)
+        env:
+          DJANGO_ALLOWED_HOSTS: pfe.example.org
+          DJANGO_SECURE_SSL_REDIRECT: "True"
+          DJANGO_SECURE_HSTS_SECONDS: "31536000"
+        run: uv run --locked python manage.py check --deploy --fail-level WARNING
+
+  # --- Qualité, compilation et audit des clients web et mobile
+  frontend:
+    name: Qualité et dépendances ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    env:
+      EXPO_NO_DOTENV: "1"
+      EXPO_NO_TELEMETRY: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, mobile]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Installer les dépendances verrouillées
+        working-directory: ${{ matrix.app }}
+        run: npm ci
+      - name: Qualité du code
+        working-directory: ${{ matrix.app }}
+        run: npm run lint
+      - name: Vérification TypeScript
+        working-directory: ${{ matrix.app }}
+        run: npm run typecheck
+      - name: Compatibilité des dépendances Expo
+        if: matrix.app == 'mobile'
+        working-directory: mobile
+        run: npm run check:dependencies
+      - name: Compiler le web ou exporter les bundles Android et iOS
+        working-directory: ${{ matrix.app }}
+        run: npm run build
+      - name: npm audit (bloquant à partir de la sévérité haute)
+        working-directory: ${{ matrix.app }}
+        run: npm audit --audit-level=high
+
+  # --- Vulnerability Scanning + durcissement : image Docker et Dockerfile (Trivy)
+  image:
+    name: Image Docker (Trivy)
+    needs: [secrets, sast, dependencies, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Construire l'image du backend
+        run: |
+          docker build -t pfe-backend:ci backend
+          docker save pfe-backend:ci -o backend-image.tar
+      - name: Mauvaises configurations du Dockerfile (utilisateur root, etc.)
+        run: |
+          docker run --rm -v "$PWD:/work" "$TRIVY_IMAGE" config \
+            --exit-code 1 --severity HIGH,CRITICAL /work/backend
+      - name: Vulnérabilités de l'image (système et Python)
+        run: |
+          docker run --rm -v "$PWD:/work" "$TRIVY_IMAGE" image \
+            --input /work/backend-image.tar \
+            --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed --no-progress
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-image
+          path: backend-image.tar
+          retention-days: 1
+
+  # --- Pratique : DAST (OWASP ZAP) sur l'API démarrée, à partir de son schéma OpenAPI
+  dast:
+    name: DAST (OWASP ZAP)
+    needs: [image]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: backend-image
+      - name: Démarrer l'API
+        run: |
+          docker load -i backend-image.tar
+          cle=$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')
+          docker run -d --name api -p 8000:8000 \
+            -e DJANGO_SECRET_KEY="$cle" \
+            -e DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1 \
+            -e DJANGO_API_DOCS_ENABLED=True \
+            -e DJANGO_API_PUBLIC_URL=http://localhost:8000 \
+            -e DJANGO_THROTTLE_ANON=10000/min \
+            -e DATABASE_URL=sqlite:////tmp/db.sqlite3 \
+            pfe-backend:ci \
+            sh -c "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:8000/api/health/ && exit 0
+            sleep 2
+          done
+          docker logs api
+          exit 1
+      - name: Scan d'API ZAP
+        run: |
+          mkdir -p zap && chmod 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$ZAP_IMAGE" \
+            zap-api-scan.py -t http://localhost:8000/api/schema/ -f openapi \
+            -r zap-report.html -J zap-report.json -I
+      - name: Bloquer sur les alertes de risque élevé
+        run: |
+          eleves=$(jq '[.site[]?.alerts[]? | select(.riskcode == "3")] | length' zap/zap-report.json)
+          echo "Alertes de risque élevé : $eleves"
+          test "$eleves" -eq 0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: rapport-zap
+          path: zap/
+
+  # --- Pratique : Collaboration. Toute faille détectée sur develop/main ouvre (ou complète) une issue.
+  open-issue:
+    name: Ticket de sécurité
+    needs: [secrets, sast, dependencies, tests, frontend, image, dast]
+    if: failure() && (github.event_name == 'push' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      actions: read # pour lister les jobs en échec
+    steps:
+      - name: Ouvrir ou compléter l'issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh label create security --repo "$REPO" --color B60205 \
+            --description "Problème détecté par la pipeline DevSecOps" --force
+          jobs=$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
+            --jq '.jobs[] | select(.conclusion == "failure") | "- " + .name')
+
+          if [ "$EVENT" = "schedule" ]; then
+            titre="Scan planifié : nouvelle vulnérabilité sur $BRANCH"
+            assigne=""
+          else
+            titre="Faille détectée sur $BRANCH (${SHA::7})"
+            assigne="$ACTOR"
+          fi
+          corps=$(printf 'La pipeline DevSecOps a échoué.\n\n**Jobs en échec :**\n%s\n\n**Rapports :** %s\n\nCommit : %s' "$jobs" "$RUN_URL" "$SHA")
+
+          existante=$(gh issue list --repo "$REPO" --label security --state open \
+            --search "\"$titre\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --repo "$REPO" --body "$corps"
+          else
+            gh issue create --repo "$REPO" --title "$titre" --body "$corps" \
+              --label security ${assigne:+--assignee "$assigne"}
+          fi

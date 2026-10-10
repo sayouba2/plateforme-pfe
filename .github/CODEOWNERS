@@ -1,0 +1,15 @@
+# Responsable de relecture par défaut, puis par zone du dépôt (une zone par ligne).
+# Remplacer les noms d'utilisateur GitHub, puis décommenter les lignes.
+
+*                       @sayouba2
+
+# /backend/             @utilisateur-backend
+# /web/                 @utilisateur-web
+# /mobile/              @utilisateur-mobile
+# /.github/             @utilisateur-pipeline
+# /infra/               @utilisateur-pipeline
+# /docker-compose.yml   @utilisateur-pipeline
+# /security/            @utilisateur-pipeline @utilisateur-ia
+# /docs/conception/     @utilisateur-ia
+/AGENTS.md        @sayouba2
+/docs/RULES.md    @sayouba2

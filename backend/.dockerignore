@@ -1,0 +1,15 @@
+# Ne jamais copier dans l'image : secrets, environnements locaux, tests, caches
+.env
+.env.*
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.sqlite3
+tests/
+staticfiles/
+media/
+*.sarif
+Dockerfile
+.dockerignore

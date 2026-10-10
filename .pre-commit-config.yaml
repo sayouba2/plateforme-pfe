@@ -1,0 +1,38 @@
+# Contrôles exécutés sur le poste du développeur AVANT chaque commit (pratique « Shift Left »).
+# Installation, une fois par clone :  pip install pre-commit  puis  pre-commit install
+# Lancer sur tout le dépôt :            pre-commit run --all-files
+exclude: ^docs/conception/images/ # images générées par PlantUML
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Secrets (clés API, mots de passe, jetons) : le commit est refusé
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # Qualité + règles de sécurité Python (préfixe S)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+
+  # SAST Python : mêmes seuils que la pipeline
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: ["-c", "backend/pyproject.toml", "-ll", "-ii"]
+        additional_dependencies: ["bandit[toml]"]
+        files: ^backend/

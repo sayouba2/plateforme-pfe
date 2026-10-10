@@ -1,0 +1,47 @@
+# --- Secrets et configuration locale : JAMAIS dans le dépôt
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+*.p8
+google-services.json
+GoogleService-Info.plist
+
+# --- Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.sqlite3
+backend/staticfiles/
+backend/media/
+
+# --- Node, React, React Native / Expo
+node_modules/
+dist/
+build/
+.expo/
+web-build/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- Rapports d'outils générés localement (en CI, ils sont publiés comme artefacts)
+*.sarif
+semgrep.json
+zap/
+backend-image.tar
+
+# --- Éditeurs et systèmes
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

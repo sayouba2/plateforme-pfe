@@ -1,0 +1,53 @@
+[project]
+name = "plateforme-pfe-backend"
+version = "0.1.0"
+description = "API Django de la plateforme de gestion des stages et PFE"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.2,<5.3",        # LTS : correctifs de sécurité jusqu'en avril 2028
+    "djangorestframework",
+    "drf-spectacular",         # schéma OpenAPI : contrat d'API et cible du DAST
+    "django-environ",          # configuration par variables d'environnement
+    "django-cors-headers",     # CORS limité aux front-ends connus
+    "argon2-cffi",             # hachage des mots de passe avec Argon2id
+    "gunicorn",
+    "psycopg[binary]",
+    "redis>=8.1.0,<9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-django",
+    "ruff",
+    "bandit[sarif]",
+    "pip-audit",
+    "pre-commit",
+]
+
+[tool.uv]
+# Pas de paquet à construire : ce projet est une application Django.
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--strict-markers"
+markers = ["integration: nécessite les services PostgreSQL et Redis de test"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint]
+# E/W/F : erreurs de base · I : imports · B : bugs probables · UP : syntaxe moderne
+# S : règles de sécurité (équivalent Bandit, directement dans l'éditeur) · DJ : bonnes pratiques Django
+select = ["E", "W", "F", "I", "B", "UP", "S", "DJ"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # assert est normal dans les tests
+
+[tool.bandit]
+exclude_dirs = ["tests", "migrations", ".venv"]

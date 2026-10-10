@@ -1,0 +1,54 @@
+# Règles Semgrep propres au projet (Django / Django REST Framework).
+# Elles complètent les jeux de règles publics p/python et p/django.
+# Sévérité ERROR = bloque la pipeline · WARNING = signalé, non bloquant.
+rules:
+  - id: drf-allowany-a-justifier
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Endpoint public (AllowAny). Vérifiez qu'il doit vraiment être accessible sans
+      authentification, puis justifiez l'exception par un commentaire au-dessus et
+      « # nosemgrep: drf-allowany-a-justifier » sur la ligne.
+    metadata:
+      category: security
+      owasp: "A01:2025 - Broken Access Control"
+      cwe: "CWE-284: Improper Access Control"
+    pattern-either:
+      - pattern: permission_classes([..., AllowAny, ...])
+      - pattern: permission_classes = [..., AllowAny, ...]
+      - pattern: permission_classes = (..., AllowAny, ...)
+
+  - id: django-csrf-exempt
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Protection CSRF désactivée sur cette vue. À n'utiliser que pour un endpoint
+      sans session (authentification par jeton) et à justifier en revue de code.
+    metadata:
+      category: security
+      owasp: "A01:2025 - Broken Access Control"
+      cwe: "CWE-352: Cross-Site Request Forgery"
+    pattern: |
+      @csrf_exempt
+      def $F(...): ...
+
+  - id: django-sql-brut-construit
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Requête SQL construite par concaténation ou formatage : risque d'injection SQL.
+      Utilisez l'ORM ou des paramètres : cursor.execute("... WHERE id = %s", [valeur]).
+    metadata:
+      category: security
+      owasp: "A05:2025 - Injection"
+      cwe: "CWE-89: SQL Injection"
+    pattern-either:
+      - pattern: $M.raw(f"...", ...)
+      - pattern: $M.raw("..." % $X, ...)
+      - pattern: $M.raw("..." + $X, ...)
+      - pattern: $M.raw("...".format(...), ...)
+      - pattern: $C.execute(f"...", ...)
+      - pattern: $C.execute("..." % $X, ...)
+      - pattern: $C.execute("..." + $X, ...)
+      - pattern: $C.execute("...".format(...), ...)
+      - pattern: $M.extra(where=[..., f"...", ...], ...)

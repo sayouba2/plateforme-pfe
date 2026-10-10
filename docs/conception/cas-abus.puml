@@ -1,0 +1,110 @@
+@startuml cas-abus
+' Plateforme de gestion des stages / PFE — cas d'abus (misuse cases, Sindre & Opdahl)
+' Noir : cas d'abus de l'attaquant · Vert : contre-mesures · Blanc : cas d'utilisation menacés
+' Générer l'image : java -jar plantuml.jar -charset UTF-8 -tpng cas-abus.puml
+
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam ArrowColor #555555
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+skinparam usecase<<abus>> {
+  BackgroundColor #212121
+  BorderColor #000000
+  FontColor #FFFFFF
+}
+skinparam usecase<<contremesure>> {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam actor<<attaquant>> {
+  BackgroundColor #212121
+  BorderColor #000000
+}
+skinparam legend {
+  BackgroundColor #FAFAFA
+  BorderColor #BDBDBD
+}
+hide <<abus>> stereotype
+hide <<contremesure>> stereotype
+hide <<attaquant>> stereotype
+
+title Plateforme de gestion des stages / PFE — cas d'abus et contre-mesures
+
+actor "Attaquant" as Att <<attaquant>>
+
+' --- Cas d'abus (ce que l'attaquant cherche à faire)
+usecase "Lire les données d'un autre\nutilisateur en changeant l'ID\n(API1 – BOLA)" as MC_BOLA <<abus>>
+usecase "Appeler une fonction réservée\nà l'administrateur\n(API5 – BFLA)" as MC_BFLA <<abus>>
+usecase "Téléverser un fichier\nmalveillant déguisé en PDF" as MC_Upload <<abus>>
+usecase "Cacher des instructions\ndans un CV\n(LLM01 – prompt injection)" as MC_Prompt <<abus>>
+usecase "Extraire des documents internes\nvia l'assistant\n(LLM02 / LLM09)" as MC_RAG <<abus>>
+usecase "Deviner des mots de passe\npar force brute\n(A07 / API2)" as MC_Brute <<abus>>
+usecase "Saturer l'API ou le LLM\n(API4 / LLM06)" as MC_DoS <<abus>>
+usecase "Injecter un script dans\nune offre (XSS stocké)\n(A05 – Injection)" as MC_XSS <<abus>>
+usecase "Voler le jeton stocké\nsur le téléphone\n(M9 – stockage non sécurisé)" as MC_Token <<abus>>
+
+' --- Cas d'utilisation légitimes menacés
+usecase "Suivre ses candidatures" as UC_SuiviCand
+usecase "Valider les conventions" as UC_ValiderConv
+usecase "Téléverser son CV" as UC_CV
+usecase "Obtenir un score de\ncompatibilité CV ↔ offre" as UC_Matching
+usecase "Interroger l'assistant\nréglementaire (RAG)" as UC_RAG
+usecase "S'authentifier" as UC_Auth
+usecase "Postuler à une offre" as UC_Postuler
+usecase "Gérer ses offres de stage" as UC_GererOffres
+
+' --- Contre-mesures (cas de sécurité)
+usecase "Vérifier le propriétaire\nde chaque objet demandé" as CM_Owner <<contremesure>>
+usecase "Contrôle d'accès par rôle,\nrefus par défaut" as CM_RBAC <<contremesure>>
+usecase "Vérifier le type réel, la taille\net renommer le fichier" as CM_Upload <<contremesure>>
+usecase "Isoler le texte du CV, valider\nla sortie JSON, score consultatif" as CM_Prompt <<contremesure>>
+usecase "Filtrer les documents\npar rôle avant la recherche" as CM_RAG <<contremesure>>
+usecase "Limiter le débit et\nverrouiller le compte" as CM_Rate <<contremesure>>
+usecase "Échapper les sorties\net appliquer une CSP" as CM_XSS <<contremesure>>
+usecase "Stockage sécurisé\n(Keychain / Keystore)" as CM_Token <<contremesure>>
+
+Att --> MC_BOLA
+Att --> MC_BFLA
+Att --> MC_Upload
+Att --> MC_Prompt
+Att --> MC_RAG
+Att --> MC_Brute
+Att --> MC_DoS
+Att --> MC_XSS
+Att --> MC_Token
+
+' «menace» : le cas d'abus menace un cas d'utilisation légitime
+MC_BOLA ..> UC_SuiviCand : <<menace>>
+MC_BFLA ..> UC_ValiderConv : <<menace>>
+MC_Upload ..> UC_CV : <<menace>>
+MC_Prompt ..> UC_Matching : <<menace>>
+MC_RAG ..> UC_RAG : <<menace>>
+MC_Brute ..> UC_Auth : <<menace>>
+MC_DoS ..> UC_Postuler : <<menace>>
+MC_DoS ..> UC_RAG : <<menace>>
+MC_XSS ..> UC_GererOffres : <<menace>>
+MC_Token ..> UC_Auth : <<menace>>
+
+' «atténue» : la contre-mesure neutralise le cas d'abus
+MC_BOLA <.. CM_Owner : <<atténue>>
+MC_BFLA <.. CM_RBAC : <<atténue>>
+MC_Upload <.. CM_Upload : <<atténue>>
+MC_Prompt <.. CM_Prompt : <<atténue>>
+MC_RAG <.. CM_RAG : <<atténue>>
+MC_Brute <.. CM_Rate : <<atténue>>
+MC_DoS <.. CM_Rate : <<atténue>>
+MC_XSS <.. CM_XSS : <<atténue>>
+MC_Token <.. CM_Token : <<atténue>>
+
+legend bottom left
+  <back:#212121><color:#FFFFFF> Noir </color></back> : cas d'abus (attaquant) · <back:#E8F5E9> Vert </back> : contre-mesures · Blanc : cas d'utilisation légitimes menacés.
+  Chaque contre-mesure devient une exigence de sécurité, un test automatisé et une ligne du threat model.
+  Références OWASP : Top 10:2025 (A) · API Security 2023 (API) · Mobile 2024 (M) · LLM Applications 2026 (LLM). Détail : docs/OWASP.md
+endlegend
+
+@enduml

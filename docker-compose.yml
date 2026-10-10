@@ -1,0 +1,72 @@
+# Environnement local : API Django + PostgreSQL + Redis partagé.
+# Démarrer : cp -n config.local.example .env (puis remplir), puis docker compose up --build
+# Services à ajouter au fil des phases : web (React), nginx (TLS, rate limiting),
+# minio (fichiers), ollama + pgvector (IA, décision D4 à valider), monitoring.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+    networks: [interne] # aucun port publié : la base n'est joignable que par l'API
+
+  redis:
+    image: redis:7.4-alpine
+    user: redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Définir REDIS_PASSWORD pour le cache partagé}
+    command:
+      - sh
+      - -c
+      - exec redis-server --save '' --appendonly no --requirepass "$$REDIS_PASSWORD"
+    healthcheck:
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [cache]
+
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DJANGO_READ_DOT_ENV: "False"
+      CACHE_URL: redis://redis:6379/1
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Définir REDIS_PASSWORD pour le cache partagé}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000" # exposé sur la machine locale uniquement
+    # Durcissement du conteneur
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [interne, cache]
+
+volumes:
+  pgdata:
+
+networks:
+  interne:
+  cache:
+    internal: true
