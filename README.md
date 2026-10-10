@@ -133,7 +133,10 @@ npm start --prefix mobile
 Chaque client fournit `npm run lint`, `npm run typecheck` et `npm run build` ; le mobile fournit
 aussi `npm run check:dependencies`. La CI exécute ces contrôles et `npm audit --audit-level=high`
 sur les deux dossiers. Un verrouillage absent ou incohérent fait échouer `npm ci`. Dependabot est
-activé pour les deux clients.
+activé pour les deux clients. Les mises à jour courantes respectent les contraintes des manifestes
+et sont regroupées par composant ; les migrations Django/Expo et les versions majeures suivent
+une procédure dédiée. Les propositions de correctifs de sécurité restent prioritaires. Voir la
+[politique de maintenance des dépendances](docs/MAINTENANCE_DEPENDANCES.md).
 
 Les écrans initiaux n'appellent pas encore l'API. Les parcours métier, leurs tests et
 l'authentification restent à développer. Détails : [web/README.md](web/README.md),
