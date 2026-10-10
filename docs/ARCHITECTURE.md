@@ -196,6 +196,11 @@ Docker Compose fournit l'environnement de développement local. La préproductio
 reprennent les mêmes versions d'images avec leurs paramètres d'exploitation ; l'hébergement reste
 à arrêter. Le fichier Compose actuel n'est pas la configuration de production complète.
 
+L'installation des paquets reste dans l'étape de construction du Dockerfile. L'image d'exécution
+reçoit le virtualenv de production ; `pip`, ses bibliothèques embarquées et le bootstrap
+`ensurepip` sont retirés de cette image. Toute évolution des dépendances passe par une
+reconstruction et les audits CI, sans installation de paquets dans un conteneur en service.
+
 | Mesure | Application |
 | --- | --- |
 | Images minimales, utilisateur non-root | Dockerfile du backend (vérifié par Trivy) |
