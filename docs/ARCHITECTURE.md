@@ -9,7 +9,8 @@ Version 0.2. Toute décision d'architecture s'ajoute au journal (section 9) par 
 
 Ce document décrit l'architecture **cible de production**. Le code actuel est un socle en cours de
 développement : utilisateur personnalisé, permissions de rôle, pagination, configuration Redis,
-CI PostgreSQL et clients web/mobile initialisés en TypeScript. Les endpoints métier, les parcours
+CI PostgreSQL et client web initialisé en TypeScript. Le client mobile est temporairement retiré
+selon [la décision de report](MOBILE_TEMPORAIRE.md). Les endpoints métier, les parcours
 web/mobile, Nginx, MinIO, l'IA et la supervision restent à livrer. Les critères de sortie sont dans
 [ROADMAP.md](ROADMAP.md).
 
@@ -250,6 +251,7 @@ relecture de la PR qui ajoute ce fichier.
 | D13 | 2026-10-10 | Modèle `User` personnalisé avec un champ `role` | À créer avant la première migration ; un compte = un rôle | Groupes Django seuls |
 | D14 | 2026-10-09 | Produit complet destiné à la production ; phases de livraison sans fonctionnalités facultatives | Orientation confirmée par le propriétaire ; sécurité et exploitation requises avant livraison | Arrêt au parcours de démonstration |
 | D15 | 2026-10-09 | Quota de 10 candidatures au statut `soumise`, transaction par étudiant | Définition vérifiable du quota et résistance aux soumissions concurrentes | Comptage côté client ou hors transaction |
+| D16 | 2026-10-12 | Reporter temporairement le client mobile de D2 ; livrer le socle web/API, conserver le code mobile dans Git | Dépendances transitives mobiles vulnérables sans correctif publié ; réintégration conditionnée aux audits et contrôles complets | Conserver le client vulnérable en désactivant son audit |
 
 ## 10. Questions ouvertes
 

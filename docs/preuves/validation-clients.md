@@ -1,5 +1,9 @@
 # Initialisation des clients — 10 octobre 2026
 
+> État historique : depuis le 12 octobre 2026, le mobile est temporairement retiré du dépôt et
+> de la CI. Ses vulnérabilités ne sont pas résolues. Voir la
+> [décision de report et la procédure de réintégration](../MOBILE_TEMPORAIRE.md).
+
 Le web utilise React 19, Vite 8 et TypeScript à partir de `create-vite` 9.2.1. Le mobile utilise
 le modèle officiel `expo-template-blank-typescript` 57.0.29, Expo 57.0.27 et React Native 0.86.3.
 Le modèle mobile a été installé via npm puis copié, l'initialiseur ne pouvant pas le télécharger

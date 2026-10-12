@@ -16,6 +16,10 @@ Le cadre académique exige en parallèle une démarche de cybersécurité vérif
 des contrôles, tests et preuves de leur efficacité. Les fonctionnalités ci-dessous constituent le
 périmètre cible complet ; les phases organisent leur livraison sans rendre des exigences facultatives.
 
+Depuis le 12 octobre 2026, le client mobile est [temporairement retiré du socle](MOBILE_TEMPORAIRE.md)
+en attendant les correctifs de ses dépendances. Les exigences mobiles ci-dessous restent celles du
+produit cible ; le périmètre actuellement vérifié en CI est limité au web et au backend.
+
 ## 2. Problème et objectif
 
 Aujourd'hui, le suivi des stages passe par des e-mails, des documents papier et des tableurs : offres
