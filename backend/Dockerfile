@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Étape 1 : installation des dépendances (versions et hachages du uv.lock) ---
-FROM python:3.13-slim AS dependances
+FROM python:3.14-slim AS dependances
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -18,7 +18,7 @@ RUN uv sync --locked --no-dev
 
 
 # --- Étape 2 : image d'exécution minimale, sans installateur de paquets ---
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
