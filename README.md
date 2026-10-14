@@ -92,7 +92,7 @@ pipeline verte, PR relue. Tout code produit avec une IA est relu, compris et tes
 | Qualité web | Continuous Integration | ESLint, TypeScript, Vite | lint, types ou compilation en échec |
 | Image Docker | Vulnerability Scanning (+ Environment Hardening, Tier 2) | Trivy | CVE haute/critique corrigeable, Dockerfile mal configuré |
 | DAST | DAST | OWASP ZAP (scan d'API OpenAPI) | alerte de risque élevé |
-| Ticket de sécurité | Collaboration | GitHub CLI | — (ouvre une issue assignée sur `develop`/`main`) |
+| Ticket de sécurité | Collaboration | API GitHub | — (regroupe les détections d'un même problème sur `develop`/`main`) |
 
 Pratiques couvertes hors pipeline : **Threat Modelling** (`docs/conception`), **Code Review** (relecture
 obligatoire + CODEOWNERS), **Shift Left** (pre-commit). À ajouter : **Continuous Monitoring**
@@ -104,6 +104,11 @@ désynchronisé du projet. L'assistance IA au diagnostic et son protocole de mes
 
 Les actions GitHub sont épinglées par SHA de commit et les outils par version exacte : un tag peut être
 réécrit, comme lors de la compromission de `trivy-action` en mars 2026.
+
+Les signalements utilisent une identité stable, indépendante de la branche et du commit :
+paquet + avis pour npm et Trivy, contrôle + étape pour les autres échecs. Les nouvelles exécutions
+complètent la même issue. Les rapports restent disponibles en artefacts et les contrôles restent
+bloquants. Fonctionnement, limites et vérification : [signalements CI](docs/SIGNALEMENTS_CI.md).
 
 ## Configuration initiale du dépôt GitHub (propriétaire, une seule fois)
 
