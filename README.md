@@ -16,7 +16,7 @@ les correctifs de ses dépendances ; son code reste dans l'historique Git. Voir 
 
 | Composant | Technologie |
 | --- | --- |
-| API | Django 5.2 LTS + Django REST Framework (Python 3.13) |
+| API | Django 5.2 LTS + Django REST Framework (Python 3.14) |
 | Web | React (Vite) |
 | Mobile (reporté) | React Native (Expo) — rôle Étudiant ; absent du périmètre actuel |
 | Base de données | PostgreSQL |
