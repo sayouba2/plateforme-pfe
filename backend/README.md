@@ -1,6 +1,6 @@
 # Backend — API Django REST
 
-Django 5.2 (LTS) + Django REST Framework, Python 3.13, dépendances gérées avec [uv](https://docs.astral.sh/uv/).
+Django 5.2 (LTS) + Django REST Framework, Python 3.14, dépendances gérées avec [uv](https://docs.astral.sh/uv/).
 
 Si le venv existe déjà dans `.venv/` à la racine, le compléter depuis la racine avec les versions
 du lock, outils de développement compris :
