@@ -16,7 +16,7 @@ les correctifs de ses dépendances ; son code reste dans l'historique Git. Voir 
 
 | Composant | Technologie |
 | --- | --- |
-| API | Django 5.2 LTS + Django REST Framework (Python 3.13) |
+| API | Django 5.2 LTS + Django REST Framework (Python 3.14) |
 | Web | React (Vite) |
 | Mobile (reporté) | React Native (Expo) — rôle Étudiant ; absent du périmètre actuel |
 | Base de données | PostgreSQL |
@@ -135,7 +135,10 @@ npm run dev --prefix web
 
 Le web fournit `npm run lint`, `npm run typecheck` et `npm run build`. La CI exécute ces contrôles
 et `npm audit --audit-level=high` dans `web/`. Un verrouillage absent ou incohérent fait échouer
-`npm ci`. Dependabot reste activé pour le web et le backend.
+`npm ci`. Dependabot reste activé pour le web et le backend. Les mises à jour courantes respectent
+les contraintes des manifestes et sont regroupées par composant ; les migrations Django/Expo et les
+versions majeures suivent une procédure dédiée. Les propositions de correctifs de sécurité restent
+prioritaires. Voir la [politique de maintenance des dépendances](docs/MAINTENANCE_DEPENDANCES.md).
 
 L'écran initial n'appelle pas encore l'API. Les parcours métier, leurs tests et
 l'authentification restent à développer. Détails : [web/README.md](web/README.md),

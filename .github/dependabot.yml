@@ -1,5 +1,9 @@
 # Mises à jour automatiques des dépendances (pratique Tier 2 « Patch Management »).
 # Les PR ouvertes par Dependabot passent par la même pipeline que les autres.
+# Politique et migrations : docs/MAINTENANCE_DEPENDANCES.md.
+# target-branch réserve ces réglages aux mises à jour de version. Les correctifs de
+# sécurité utilisent la branche par défaut (develop) et restent activés sur GitHub.
+# allow.update-types filtre les versions courantes, pas les correctifs de sécurité.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -8,6 +12,18 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Respecte notamment django>=5.2,<5.3 ; aucune modification des contraintes.
+    versioning-strategy: lockfile-only
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      backend-courant:
+        applies-to: version-updates
+        patterns: ["*"]
+        exclude-patterns: [django] # Les correctifs Django ont leur propre PR.
+        update-types: [minor, patch]
 
   - package-ecosystem: docker
     directory: /backend
@@ -15,6 +31,11 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Le runtime de l'image reste aligné avec PYTHON_VERSION de la CI et requires-python.
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-patch]
 
   - package-ecosystem: github-actions
     directory: /
@@ -22,6 +43,15 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      actions-courantes:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /web
@@ -29,5 +59,22 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    open-pull-requests-limit: 5
+    # Respecte les séries choisies dans package.json, dont TypeScript et les types Node.js.
+    versioning-strategy: lockfile-only
+    allow:
+      - dependency-type: all
+        update-types: [version-update:semver-minor, version-update:semver-patch]
+    groups:
+      react-web:
+        applies-to: version-updates
+        patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+        update-types: [minor, patch]
+      outils-web:
+        applies-to: version-updates
+        patterns: ["*"]
+        exclude-patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+        update-types: [minor, patch]
 
-# Réactiver /mobile à sa réintégration (docs/MOBILE_TEMPORAIRE.md).
+# Réactiver /mobile à sa réintégration (docs/MOBILE_TEMPORAIRE.md), selon la politique
+# Expo de docs/MAINTENANCE_DEPENDANCES.md.
