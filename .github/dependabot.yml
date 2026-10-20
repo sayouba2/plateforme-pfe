@@ -30,9 +30,4 @@ updates:
       interval: weekly
     labels: [dependencies]
 
-  - package-ecosystem: npm
-    directory: /mobile
-    target-branch: develop
-    schedule:
-      interval: weekly
-    labels: [dependencies]
+# Réactiver /mobile à sa réintégration (docs/MOBILE_TEMPORAIRE.md).

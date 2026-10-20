@@ -1,8 +1,9 @@
 # Instructions pour les assistants de code
 
-Plateforme de gestion des stages / PFE : API Django 5.2 LTS + DRF (`backend/`), web React (`web/`),
-mobile React Native / Expo (`mobile/`). Projet académique de sécurité : la qualité de la démarche
-DevSecOps prime sur le nombre de fonctionnalités.
+Plateforme de gestion des stages / PFE : API Django 5.2 LTS + DRF (`backend/`), web React (`web/`).
+Le mobile React Native / Expo est temporairement retiré ; sa réintégration est décrite dans
+`docs/MOBILE_TEMPORAIRE.md`. Projet académique de sécurité : la qualité de la démarche DevSecOps
+prime sur le nombre de fonctionnalités.
 
 ## Règles obligatoires
 

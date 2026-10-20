@@ -10,11 +10,15 @@ Le produit est destiné à la **production à la fin du développement**. Les ph
 livraison du périmètre complet ; les conditions de mise en production et l'état réel du socle sont
 décrits dans [docs/ROADMAP.md](docs/ROADMAP.md).
 
+Le périmètre actuel comprend l'API et le web. Le mobile est temporairement retiré en attendant
+les correctifs de ses dépendances ; son code reste dans l'historique Git. Voir la
+[décision de report et les conditions de réintégration](docs/MOBILE_TEMPORAIRE.md).
+
 | Composant | Technologie |
 | --- | --- |
 | API | Django 5.2 LTS + Django REST Framework (Python 3.13) |
 | Web | React (Vite) |
-| Mobile | React Native (Expo) — rôle Étudiant |
+| Mobile (reporté) | React Native (Expo) — rôle Étudiant ; absent du périmètre actuel |
 | Base de données | PostgreSQL |
 | IA | LLM local (Ollama) : score de compatibilité CV ↔ offre, assistant RAG |
 | CI/CD | GitHub Actions |
@@ -37,7 +41,6 @@ plateforme-pfe/
 │   ├── pyproject.toml + uv.lock   # dépendances verrouillées et hachées
 │   └── Dockerfile                 # image non-root, multi-étapes
 ├── web/                           # React + Vite + TypeScript (voir web/README.md)
-├── mobile/                        # Expo + React Native + TypeScript (voir mobile/README.md)
 ├── infra/                         # Nginx, monitoring (phases suivantes)
 ├── security/semgrep/              # règles SAST propres au projet
 ├── docs/
@@ -86,7 +89,7 @@ pipeline verte, PR relue. Tout code produit avec une IA est relu, compris et tes
 | SAST | SAST | Bandit, Semgrep (règles publiques + `security/semgrep`) | sévérité moyenne (Bandit), ERROR (Semgrep) |
 | Dépendances | Vulnerability Scanning (+ SCA, Tier 2) | pip-audit, npm audit | CVE connue (npm : sévérité haute) |
 | Tests et contrôles Django | Continuous Integration, Automated Security Testing | pytest, Ruff, `check --deploy` | test, lint ou configuration de prod en échec |
-| Qualité web et mobile | Continuous Integration | ESLint, TypeScript, Vite, Expo | lint, types, compatibilité Expo ou compilation en échec |
+| Qualité web | Continuous Integration | ESLint, TypeScript, Vite | lint, types ou compilation en échec |
 | Image Docker | Vulnerability Scanning (+ Environment Hardening, Tier 2) | Trivy | CVE haute/critique corrigeable, Dockerfile mal configuré |
 | DAST | DAST | OWASP ZAP (scan d'API OpenAPI) | alerte de risque élevé |
 | Ticket de sécurité | Collaboration | API GitHub | — (regroupe les détections d'un même problème sur `develop`/`main`) |
@@ -120,29 +123,24 @@ bloquants. Fonctionnement, limites et vérification : [signalements CI](docs/SIG
 4. **Settings → Advanced Security** (gratuit pour un dépôt public) : activer Dependabot alerts,
    Dependabot security updates, Secret scanning et Push protection.
 
-## Démarrer le web et le mobile
+## Démarrer le web
 
-Les deux clients sont initialisés, avec un accueil en français. Node.js 24 LTS est utilisé en CI
-et indiqué dans `.nvmrc`. Depuis la racine, dans deux terminaux distincts :
+Le client web est initialisé, avec un accueil en français. Node.js 24 LTS est utilisé en CI
+et indiqué dans `.nvmrc`. Depuis la racine :
 
 ```bash
 npm ci --prefix web
 npm run dev --prefix web
 ```
 
-```bash
-npm ci --prefix mobile
-npm start --prefix mobile
-```
+Le web fournit `npm run lint`, `npm run typecheck` et `npm run build`. La CI exécute ces contrôles
+et `npm audit --audit-level=high` dans `web/`. Un verrouillage absent ou incohérent fait échouer
+`npm ci`. Dependabot reste activé pour le web et le backend.
 
-Chaque client fournit `npm run lint`, `npm run typecheck` et `npm run build` ; le mobile fournit
-aussi `npm run check:dependencies`. La CI exécute ces contrôles et `npm audit --audit-level=high`
-sur les deux dossiers. Un verrouillage absent ou incohérent fait échouer `npm ci`. Dependabot est
-activé pour les deux clients.
-
-Les écrans initiaux n'appellent pas encore l'API. Les parcours métier, leurs tests et
+L'écran initial n'appelle pas encore l'API. Les parcours métier, leurs tests et
 l'authentification restent à développer. Détails : [web/README.md](web/README.md),
-[mobile/README.md](mobile/README.md) et [validation des clients](docs/preuves/validation-clients.md).
+[validation initiale des clients](docs/preuves/validation-clients.md) et
+[réintégration du mobile](docs/MOBILE_TEMPORAIRE.md).
 
 Règles minimales :
 - **Web** : pas de `dangerouslySetInnerHTML` sans assainissement ; aucun secret dans le code front

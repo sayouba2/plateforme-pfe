@@ -203,17 +203,15 @@ jobs:
           DJANGO_SECURE_HSTS_SECONDS: "31536000"
         run: uv run --locked python manage.py check --deploy --fail-level WARNING
 
-  # --- Qualité, compilation et audit des clients web et mobile
+  # --- Qualité, compilation et audit du web
+  # Mobile retiré temporairement du dépôt : voir docs/MOBILE_TEMPORAIRE.md.
   frontend:
     name: Qualité et dépendances ${{ matrix.app }}
     runs-on: ubuntu-latest
-    env:
-      EXPO_NO_DOTENV: "1"
-      EXPO_NO_TELEMETRY: "1"
     strategy:
       fail-fast: false
       matrix:
-        app: [web, mobile]
+        app: [web]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -229,11 +227,7 @@ jobs:
       - name: Vérification TypeScript
         working-directory: ${{ matrix.app }}
         run: npm run typecheck
-      - name: Compatibilité des dépendances Expo
-        if: matrix.app == 'mobile'
-        working-directory: mobile
-        run: npm run check:dependencies
-      - name: Compiler le web ou exporter les bundles Android et iOS
+      - name: Compiler le web
         working-directory: ${{ matrix.app }}
         run: npm run build
       - name: npm audit (bloquant à partir de la sévérité haute)
