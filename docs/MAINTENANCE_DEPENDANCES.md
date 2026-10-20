@@ -18,8 +18,8 @@ ouvertes par configuration. Les groupes sont explicitement réservés à `versio
 | Django | Correctifs `5.2.x`, grâce à `django>=5.2,<5.3`, dans une PR distincte | Changement de série LTS, avec mise à jour de la décision D1 |
 | Autres dépendances Python | Correctifs et mineures compatibles avec les contraintes, regroupés | Version majeure ou élargissement nécessaire du manifeste |
 | Web | Un groupe React/React DOM/types et un groupe d'outils, dans les plages de `package.json` | Changement de version majeure ; changement de série TypeScript ou Node.js/types coordonné |
-| Mobile | Un groupe Expo et un groupe d'outils, dans les plages de `package.json` | Changement de SDK ou de version exacte de React/React Native, via la procédure Expo |
-| Image Python | Correctifs de la série 3.13 | Changement de runtime, aligné avec la CI et `requires-python` |
+| Mobile (à sa réintégration) | Un groupe Expo et un groupe d'outils, dans les plages de `package.json` | Changement de SDK ou de version exacte de React/React Native, via la procédure Expo |
+| Image Python | Correctifs de la série courante (3.14) | Changement de runtime, aligné avec la CI et `requires-python` |
 | GitHub Actions | Correctifs et mineures regroupés ; références conservées sous forme de SHA | Nouvelle version majeure, avec vérification des permissions et du runner requis |
 
 Les versions exactes de React et React Native dans le mobile n'ont aucune marge de mise à jour
@@ -27,7 +27,7 @@ dans le fichier de verrouillage : même un correctif de ces versions exige la pr
 Le groupe Expo facilite la relecture ; la compatibilité est vérifiée par `expo install --check`
 et par les builds. Un numéro de version mineure ne garantit pas à lui seul la compatibilité.
 
-Les tags Docker comme `python:3.13-slim` peuvent recevoir de nouveaux correctifs sans changer
+Les tags Docker comme `python:3.14-slim` peuvent recevoir de nouveaux correctifs sans changer
 de nom. Les reconstructions et le scan Trivy restent nécessaires, même sans PR Dependabot.
 Les versions d'outils écrites dans les commandes du workflow ou du Dockerfile doivent aussi
 être revues lors de la maintenance : cette configuration Dependabot ne les couvre pas toutes.

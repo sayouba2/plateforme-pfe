@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Étape 1 : installation des dépendances (versions et hachages du uv.lock) ---
-FROM python:3.13-slim AS dependances
+FROM python:3.14-slim AS dependances
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -17,12 +17,18 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev
 
 
-# --- Étape 2 : image d'exécution minimale, sans uv ni outils de build ---
-FROM python:3.13-slim
+# --- Étape 2 : image d'exécution minimale, sans installateur de paquets ---
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
+
+# Les dépendances sont déjà installées dans /opt/venv par l'étape de construction.
+# Retirer pip et le bootstrap ensurepip supprime aussi leurs bibliothèques embarquées,
+# inutiles à l'exécution et auditées par Trivy (msgpack, setuptools, urllib3, etc.).
+RUN python -m pip uninstall --yes pip \
+    && python -c "import ensurepip, pathlib, shutil; shutil.rmtree(pathlib.Path(ensurepip.__file__).parent)"
 
 # Utilisateur sans privilèges : le processus ne tourne jamais en root.
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app

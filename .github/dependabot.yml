@@ -32,7 +32,7 @@ updates:
       interval: weekly
     labels: [dependencies]
     open-pull-requests-limit: 5
-    # Le runtime Python 3.13 est aligné entre l'image et les contrôles CI.
+    # Le runtime de l'image reste aligné avec PYTHON_VERSION de la CI et requires-python.
     allow:
       - dependency-type: all
         update-types: [version-update:semver-patch]
@@ -60,7 +60,7 @@ updates:
       interval: weekly
     labels: [dependencies]
     open-pull-requests-limit: 5
-    # Respecte les séries choisies, notamment les types Node.js 24 et TypeScript.
+    # Respecte les séries choisies dans package.json, dont TypeScript et les types Node.js.
     versioning-strategy: lockfile-only
     allow:
       - dependency-type: all
@@ -76,26 +76,5 @@ updates:
         exclude-patterns: [react, react-dom, "@types/react", "@types/react-dom"]
         update-types: [minor, patch]
 
-  - package-ecosystem: npm
-    directory: /mobile
-    target-branch: develop
-    schedule:
-      interval: weekly
-    labels: [dependencies]
-    open-pull-requests-limit: 5
-    # React et React Native restent aux versions exactes choisies par le SDK Expo.
-    # Leur mise à jour et tout changement de SDK passent par la procédure Expo.
-    versioning-strategy: lockfile-only
-    allow:
-      - dependency-type: all
-        update-types: [version-update:semver-minor, version-update:semver-patch]
-    groups:
-      expo-mobile:
-        applies-to: version-updates
-        patterns: [expo, "expo-*", react, react-native, "react-native-*", "@types/react"]
-        update-types: [minor, patch]
-      outils-mobile:
-        applies-to: version-updates
-        patterns: ["*"]
-        exclude-patterns: [expo, "expo-*", react, react-native, "react-native-*", "@types/react"]
-        update-types: [minor, patch]
+# Réactiver /mobile à sa réintégration (docs/MOBILE_TEMPORAIRE.md), selon la politique
+# Expo de docs/MAINTENANCE_DEPENDANCES.md.

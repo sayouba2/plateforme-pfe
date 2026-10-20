@@ -7,8 +7,10 @@ l'ordre de travail ; une fonctionnalité tardive n'est pas facultative.
 
 - Présents : configuration Django, sonde de santé, utilisateur personnalisé et migration initiale,
   permissions des cinq rôles, pagination bornée, configuration Redis, Docker Compose local,
-  contrôles CI et services PostgreSQL/Redis de test ; clients React/Vite et Expo/React Native
-  initialisés en TypeScript, avec lint, compilation et audits npm en CI.
+  contrôles CI et services PostgreSQL/Redis de test ; client React/Vite initialisé en TypeScript,
+  avec lint, compilation et audit npm en CI.
+- Temporairement retiré : client Expo/React Native et ses dépendances vulnérables. Le code reste
+  récupérable dans Git ; voir [le report du mobile](MOBILE_TEMPORAIRE.md).
 - Spécifiés : règle des dix candidatures, matrice d'autorisations, protocole d'assistance IA,
   architecture de production et critères de livraison.
 - À implémenter : endpoints métier et d'authentification, parcours web/mobile, MFA, journal d'audit,
@@ -20,14 +22,16 @@ l'ordre de travail ; une fonctionnalité tardive n'est pas facultative.
 
 Les résultats disponibles et leurs limites figurent dans la
 [vérification du socle](preuves/validation-socle.md) et la
-[validation des clients](preuves/validation-clients.md). L'audit mobile relève des dépendances
-transitives vulnérables ; ce blocage reste actif dans la CI.
+[validation initiale des clients](preuves/validation-clients.md). Depuis le 12 octobre 2026,
+la CI porte sur le web et le backend. Les vulnérabilités mobiles restent non résolues et empêchent
+la réintégration du client ; une CI verte sur le périmètre actuel ne valide pas le mobile.
 
 ## P1 — Identité et recrutement
 
 Modèle de classes, états et contrat d'API, puis inscription/validation des comptes, sessions web,
 authentification mobile avec rotation/révocation, contrôles de rôle et de propriété, journal d'audit,
-offres, candidatures et conventions. Les clients web et mobile sont initialisés avec leurs contrôles.
+offres, candidatures et conventions. Le web est initialisé avec ses contrôles ; le mobile sera
+réintégré avec ses contrôles après correction de ses dépendances.
 
 Sortie : parcours recrutement/convention testé sur les deux clients ; tests de quota, doublons,
 concurrence et accès croisés sur PostgreSQL ; aucun fichier personnel exposé publiquement.
